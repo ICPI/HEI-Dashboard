@@ -1,0 +1,158 @@
+# ********************************************************************************************************#
+# This increases the memory in R so it can run big files
+memory.limit(size=56000)
+
+#You'll need to have a package called devtools which will then allow you to install the ICPI package.
+#install.packages("devtools")
+devtools::install_github("ICPI/ICPIutilities") 
+force=TRUE
+
+library(tidyr)
+force=TRUE
+
+library(dplyr)
+force=TRUE
+
+#SECTION 1: Read in the Fact View data set
+# Remove all objects
+rm(list=ls())
+
+# Define a vector for column types
+# Column 1-41: character; column 42-51: numeric
+type<-c(rep("character",41),rep("numeric",10))
+
+# Check the content of "type"
+type
+
+# Set-up working directory (Change as needed)
+setwd("C://Users//nmcdavid//Documents//PMTCT HEI Dashboard//Site Level//5th try")
+
+# Read in the frozen dataset 
+# Use option fileEncoding="UTF-8-BOM" for special characters and the first column name problem
+SiteIM<-read.csv("C://Users//nmcdavid//Documents//PMTCT HEI Dashboard//Site Level//MER_Structured_Dataset_Site_IM_FY17-18_20180921_v2_1_Kenya.txt",sep="\t",header = T)
+
+# Check dimension and structure
+dim(SiteIM)
+str(SiteIM)
+
+#Create subsets of data to bind later
+#TX_NEW_PBF <-PSNUIM[which(PSNUIM$indicator=="TX_NEW" & PSNUIM$disaggregate=="PregnantOrBreastfeeding/HIVStatus"),]
+#PMTCT_EID2monsFY17 <- SiteIM[which(SiteIM$indicator=="PMTCT_EID" & SiteIM$disaggregate=="Age/HIVStatus" & SiteIM$AgeAsEntered=="<=02 Months"),]
+#PMTCT_EID2_12monsFY17 <- SiteIM[which(SiteIM$indicator=="PMTCT_EID" & SiteIM$disaggregate=="Age/HIVStatus" & SiteIM$AgeAsEntered=="02 - 12 Months"),]
+#TX_CURR_under1 <- SiteIM[which(SiteIM$indicator=="TX_CURR" & SiteIM$AgeAsEntered=="<01"),]
+#PMTCT_ART <- SiteIM[which(SiteIM$indicator=="PMTCT_ART" & SiteIM$disaggregate=="Total Numerator"),]
+PMTCT_STAT_POS <- SiteIM[which(SiteIM$indicator=="PMTCT_STAT_POS" & SiteIM$disaggregate=="Total Numerator"),]
+PMTCT_EIDTN <- SiteIM[which(SiteIM$indicator=="PMTCT_EID" & SiteIM$disaggregate=="Total Numerator"),]
+PMTCT_EID2mons <- SiteIM[which(SiteIM$indicator=="PMTCT_EID" & SiteIM$AgeAsEntered=="<=02 Months"),]
+PMTCT_EID2_12mons <- SiteIM[which(SiteIM$indicator=="PMTCT_EID" & SiteIM$AgeAsEntered=="02 - 12 Months"),]
+PMTCT_HEI_POS2mon <- SiteIM[which(SiteIM$indicator=="PMTCT_HEI_POS" & SiteIM$disaggregate=="Age/HIVStatus" & SiteIM$AgeAsEntered=="<=02 Months"),]
+PMTCT_HEI_POS2_12mon <- SiteIM[which(SiteIM$indicator=="PMTCT_HEI_POS" & SiteIM$disaggregate=="Age/HIVStatus" & SiteIM$AgeAsEntered=="02 - 12 Months"),]
+PMTCT_HEI_POSTN <- SiteIM[which(SiteIM$indicator=="PMTCT_HEI_POS" & SiteIM$disaggregate=="Total Numerator"),]
+TX_NEW_under1 <- SiteIM[which(SiteIM$indicator=="TX_NEW" & SiteIM$disaggregate=="Age/Sex/HIVStatus" & SiteIM$AgeAsEntered=="<01"),]
+
+
+# Create PMTCT_HEI_POS_ART
+PMTCT_HEI_POS_ART <- SiteIM[which(SiteIM$disaggregate=="Age/HIVStatus/ARTStatus"),]
+PMTCT_HEI_POS_ART_TN<- SiteIM[which(SiteIM$disaggregate=="Age/HIVStatus/ARTStatus"),]
+
+# Renaming PMTCT_HEI_POS to PMTCT_HEI_POS_ART
+PMTCT_HEI_POS_ART_TN$AgeAsEntered <- ifelse(PMTCT_HEI_POS_ART_TN$AgeAsEntered=="<=02 Months","0-12 Months",
+                                         ifelse(PMTCT_HEI_POS_ART_TN$AgeAsEntered=="02 - 12 Months","0-12 Months",
+                                                ""))
+PMTCT_HEI_POS_ART$indicator <- ifelse (PMTCT_HEI_POS_ART$indicator=="PMTCT_HEI_POS", "PMTCT_HEI_POS_ART")
+PMTCT_HEI_POS_ART_TN$indicator <- ifelse (PMTCT_HEI_POS_ART_TN$indicator=="PMTCT_HEI_POS", "PMTCT_HEI_POS_ART")
+PMTCT_HEI_POS_ART_TN$standardizedDisaggregate <- ifelse(PMTCT_HEI_POS_ART$standardizedDisaggregate=="Age/HIVStatus/ARTStatus", "Total Numerator")
+
+PMTCT_EIDTN$AgeAsEntered <- ifelse(PMTCT_EIDTN$AgeAsEntered=="","0-12 Months","")
+PMTCT_HEI_POSTN$AgeAsEntered <- ifelse(PMTCT_HEI_POSTN$AgeAsEntered=="","0-12 Months","")
+
+#Binding dataset (PMTCT_ART,PMTCT_STAT, TX_CURR_under1, HTS_TST_Modality,PMTCT_EID_Less_Equal_Two_Months, HTS_TST_under1,HTS_TST_NEG_Modality, HTS_TST_NEG_under1, HTS_TST_POS_Modality,HTS_TST_POS_under1,TX_NEW_PBF,
+alldata = bind_rows(PMTCT_STAT_POS, 
+                    PMTCT_EIDTN, 
+                    PMTCT_EID2mons,
+                    PMTCT_HEI_POS2mon, 
+                    PMTCT_HEI_POS2_12mon, 
+                    PMTCT_HEI_POSTN, 
+                    TX_NEW_under1, 
+                    PMTCT_HEI_POS_ART, 
+                    PMTCT_HEI_POS_ART_TN)
+
+#Binding dataset to exclude EID 02-12 months
+alldata2 = bind_rows(PMTCT_STAT_POS, 
+                    PMTCT_EIDTN, 
+                    PMTCT_EID2mons, 
+                    PMTCT_HEI_POS2mon, 
+                    PMTCT_HEI_POS2_12mon, 
+                    PMTCT_HEI_POSTN,
+                    PMTCT_HEI_POS_ART, 
+                    PMTCT_HEI_POS_ART_TN)
+# Create 2 dataframes - results, and targets - to be combined.
+
+# These are the columns which will be included in Tableau
+# This list can be modified as needed."indicatorType","Facility","disaggregate", "MechanismID", "otherDisaggregate", "resultStatus",
+TableauColumns<-c("SiteName", "OperatingUnit", "SNU1", "PSNU", "SNUPrioritization", "PrimePartner", "FundingAgency", 
+                  "ImplementingMechanismName", "SiteType", "indicator", "standardizedDisaggregate", "AgeAsEntered" )
+
+#-contains("FY2017")-contains("APR")-contains("FY2017Q4")-contains("FY2017Q1"),-contains("FY2017Q2"),-contains("FY2017Q3"),
+results<- alldata %>%
+  select(-contains("TARGETS"),-contains("APR"), -contains("FY2017"), -contains("FY2019")) %>% 
+  
+  # Columns that will be used in Tableau.
+  group_by_at(TableauColumns) %>%
+  
+  # Creates one Values column and one period column (e.g. FY2017Q3)
+  summarize_at(vars(starts_with("FY2")), funs(sum(., na.rm=TRUE))) %>%
+  ungroup %>%
+  gather(period, values, starts_with("FY2")) %>% 
+  filter(values !=0)
+
+results2<- alldata2 %>%
+  select(-contains("TARGETS"),-contains("APR"),-contains("FY2018"), -contains("FY2019")) %>% 
+  
+  # Columns that will be used in Tableau.
+  group_by_at(TableauColumns) %>%
+  
+  # Creates one Values column and one period column (e.g. FY2017Q3)
+  summarize_at(vars(starts_with("FY2")), funs(sum(., na.rm=TRUE))) %>%
+  ungroup %>%
+  gather(period, values, starts_with("FY2")) %>% 
+  filter(values !=0)
+
+# Create targets dataframe for FY16 and FY17 targets
+targets<- alldata %>%
+  select(-contains("APR"),-contains("FY2017"), -contains("FY2019"),-contains("Q")) %>%  
+  
+  # Columns that will be used in Tableau.
+  group_by_at(TableauColumns) %>%
+  
+  # Creates one Values column and one period column (e.g. FY2016_TARGETS)
+  summarize_at(vars(starts_with("FY2")), funs(sum(., na.rm=TRUE))) %>%
+  ungroup %>%
+  gather(period, values, starts_with("FY2")) %>%
+  filter(values !=0)
+
+# Creates a column in each dataframe to label values either Results or Targets
+results2$ResultsOrTargets <- "Quarterly Results"
+results$ResultsOrTargets <- "Quarterly Results"
+targets$ResultsOrTargets <- "Targets"
+
+# Combines all three dataframes into one APR,
+Semifinaldata=bind_rows(results,results2,targets)
+
+Semifinaldata$FiscalYear <- ifelse(Semifinaldata$period=="FY2018Q1","FY2018",
+                                   ifelse(Semifinaldata$period=="FY2018Q2","FY2018",
+                                          ifelse(Semifinaldata$period=="FY2018Q3","FY2018",
+                                                 ifelse(Semifinaldata$period=="FY2018_TARGETS","FY2018",
+                                                        ifelse(Semifinaldata$period=="FY2017Q1","FY2017",
+                                                               ifelse(Semifinaldata$period=="FY2017Q2","FY2017",
+                                                                      ifelse(Semifinaldata$period=="FY2017Q3","FY2017",
+                                                                             ifelse(Semifinaldata$period=="FY2017Q4","FY2017"
+                                                                                    ,""))))))))
+
+#create column for period slicer
+Semifinaldata$PeriodSlicer <- ifelse(Semifinaldata$period=="FY2018Q1","FY2018Q1",
+                                   ifelse(Semifinaldata$period=="FY2018Q2","FY2018Q2",
+                                          ifelse(Semifinaldata$period=="FY2018Q3","FY2018Q3", "")))
+
+write.table(Semifinaldata, "SiteIMxIMdFinal110182018Q3cleanw_oZEROSno2-12.txt", sep=",", row.names = F)
+
